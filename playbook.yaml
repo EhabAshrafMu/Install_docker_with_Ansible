@@ -1,0 +1,48 @@
+- name: A playbook for installing docker, running a container and displaying the "docker ps" output in the terminal.
+  hosts: web
+  gather_facts: yes
+  become: yes
+  tasks:
+    - name: Install the necessary plugin tools
+      dnf:
+        name: dnf-plugins-core
+        state: present
+        update_cache: yes 
+
+    - name: Add the docker repos to the repo lists
+      command:
+        cmd: dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+      args:
+        creates: /etc/yum.repos.d/docker-ce.repo
+
+
+    - name: Install the required docker packages
+      dnf:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+
+    - name: Start and enable the docker service
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Run an Nginx Container
+      community.docker.docker_container:
+        name: nginx-from-ansible
+        image: nginx
+        state: started
+
+    - name: Run the docker ps command and register the results
+      command:
+        cmd: docker ps
+      register: docker_results
+
+    - name: print out the results in the terminal
+      debug:
+        msg: "{{ docker_results.stdout_lines }}"
